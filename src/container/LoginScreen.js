@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, Image, StatusBar, SafeAreaView, Dimensions } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, Image, StatusBar, SafeAreaView, Dimensions, Alert } from 'react-native'
 import React, { useState } from 'react'
 import { loginStyles } from './style';
 import axios from 'axios';
@@ -53,24 +53,26 @@ export default function LoginScreen() {
         const valid = ValidateForm()
         if (valid == true) {
             console.log('Email : ' + Email + '  Password : ' + Password)
-            axios.post('https://techeruditedev.xyz/projects/plie-api/public/api/login', {
-                email: Email,
+            axios.post('https://demo.thingsboard.io/api/auth/login', {
+                username: Email,
                 password: Password
             })
                 .then(async function (response) {
-                    console.log(response.data.data.token);
-                    let data = response.data.data
+                    console.log(response.data.token);
+                    let data = response.data
 
                     if (data.token) {
                         await AsyncStorage.setItem(
                             '@User_Token', data.token
                         );
                         dispatch(setUserToken(data.token));
-
                     }
                 })
                 .catch(function (error) {
-                    console.log(error);
+                    Alert.alert(
+                        'Error : '+ error,
+                    ),
+                        console.log(error);
                 }).finally(() => {
                     dispatch(setLoaderState(false))
                 })
