@@ -84,7 +84,7 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={loginStyles.container}>
-            <StatusBar backgroundColor={'transparent'} translucent={false} />
+            <StatusBar backgroundColor={'#000'} />
             <View style={{ paddingTop: height * 0.15 }}>
                 <Image
                     style={loginStyles.headimg}
@@ -138,3 +138,8 @@ export default function LoginScreen() {
 
 // email: 'testpracticaluser001@mailinator.com',
 // password: 'Test@123'
+
+// {
+//  s.shubham+iot@tftus.com
+//     Shubhuiot@123
+// } 

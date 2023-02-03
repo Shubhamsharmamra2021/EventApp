@@ -13,11 +13,14 @@ export default function DeviceScreen() {
     const [serverAttribute, setServerAttribute] = useState([])
     const [sharedAttribute, setSharedAttribute] = useState([])
     const [clientAttribute, setClientAttribute] = useState([])
+    const [dataTelementry, setdataTelementry] = useState([])
+
 
     const dispatch = useDispatch()
 
     useEffect(() => {
         fetchData()
+        GeyTelementryData_WebSocket()
     }, [])
 
     async function fetchData() {
@@ -33,7 +36,7 @@ export default function DeviceScreen() {
                 //console.log("Data", response.data);
                 let dataArray = response.data;
                 setServerAttribute(dataArray)
-            }) 
+            })
 
             await axios.get('https://demo.thingsboard.io/api/plugins/telemetry/DEVICE/' + deviceId + '/values/attributes/SHARED_SCOPE', {
                 headers: {
@@ -43,7 +46,7 @@ export default function DeviceScreen() {
                 //console.log("Data", response.data);
                 let dataArray = response.data;
                 setSharedAttribute(dataArray)
-            }) 
+            })
 
             await axios.get('https://demo.thingsboard.io/api/plugins/telemetry/DEVICE/' + deviceId + '/values/attributes/CLIENT_SCOPE', {
                 headers: {
@@ -53,7 +56,7 @@ export default function DeviceScreen() {
                 //console.log("Data", response.data);
                 let dataArray = response.data;
                 setClientAttribute(dataArray)
-            }) 
+            })
         } catch (exp) {
             Alert.alert(
                 'Error : ' + JSON.stringify(exp.message),
@@ -62,11 +65,66 @@ export default function DeviceScreen() {
             dispatch(setLoaderState(false))
 
         }
+    }
 
+    async function GeyTelementryData_WebSocket() {
+        try {
+            let token = await AsyncStorage.getItem('@User_Token')
+            var webSocket = new WebSocket("wss://demo.thingsboard.io/api/ws/plugins/telemetry?token=" + token);
 
+            if (deviceId === "") {
+                Alert.alert("Invalid device id!");
+                webSocket.close();
+            }
 
+            if (token === "") {
+                Alert.alert("Invalid JWT token!");
+                webSocket.close();
+            }
 
+            webSocket.onopen = function () {
+                var object = {
+                    tsSubCmds: [
+                        {
+                            entityType: "DEVICE",
+                            entityId: deviceId,
+                            scope: "LATEST_TELEMETRY",
+                            cmdId: 10
+                        }
+                    ],
+                    historyCmds: [],
+                    attrSubCmds: []
+                };
+                var data = JSON.stringify(object);
+                webSocket.send(data);
+                // alert("Message is sent: " + data);
+            };
 
+            webSocket.onmessage = function (event) {
+                var received_msg = JSON.parse(event.data);
+                var keys = Object.keys(received_msg.data)
+                var values = Object.values(received_msg.data)
+                var telemetryArray = []
+                for (let i = 0; i < keys.length; i++) {
+                    var obj = {
+                        key: keys[i],
+                        value: values[i][0][1]
+                    }
+                    telemetryArray.push(obj)
+                }
+                console.log(telemetryArray)
+                setdataTelementry(telemetryArray)
+                // alert("Message is received: " + received_msg);
+            };
+
+            webSocket.onclose = function (event) {
+                Alert.alert("Connection is closed!");
+            };
+        } catch (exp) {
+            Alert.alert(
+                'Error : ' + JSON.stringify(exp.message),
+            )
+        }
     }
 
     const logout = async () => {
@@ -155,6 +213,52 @@ export default function DeviceScreen() {
         type ? setServerAttribute(result) : setSharedAttribute(result)
     }
 
+    async function SetAttributes(type) {
+        try {
+            let token = await AsyncStorage.getItem('@User_Token')
+            let dataType = type ? serverAttribute : sharedAttribute
+
+            const buildObject = arr => {
+                const obj = {};
+                for (let i = 0; i < arr.length; i++) {
+                    const { key, value } = arr[i];
+                    obj[key] = value;
+                };
+                return obj;
+            };
+            let data = buildObject(dataType)
+            let headers = {
+                Authorization: 'Bearer ' + token
+            }
+            let url = `${"https://demo.thingsboard.io/api/plugins/telemetry/DEVICE/"}${deviceId}${"/SERVER_SCOPE"}`
+            console.log(url, data, headers)
+            await axios.post(url, data,
+                { headers: headers }
+            ).then(async function (response) {
+                console.log(response);
+                let data = response
+                if (data.status == '200') {
+                    console.log("API HIT")
+                    await fetchData()
+                    await GeyTelementryData_WebSocket()
+                }
+            })
+                .catch(function (error) {
+                    Alert.alert(
+                        'Error : ' + JSON.stringify(error),
+                    ),
+                        console.log(error);
+                }).finally(() => {
+                    dispatch(setLoaderState(false))
+                })
+        } catch (exp) {
+            Alert.alert(
+                'Error : ' + JSON.stringify(exp.message),
+            )
+        }
+    }
+
+
     return (
         <SafeAreaView style={{ backgroundColor: '#fff' }} >
             <StatusBar backgroundColor={'#000'} />
@@ -175,9 +279,31 @@ export default function DeviceScreen() {
                         style={DeviceStyles.inputField}
                     />
                     <View style={{ alignSelf: 'center', marginVertical: 20 }}>
-                        <TouchableOpacity style={DeviceStyles.mainButton} onPress={() => { fetchData() }}>
+                        <TouchableOpacity style={DeviceStyles.mainButton} onPress={() => {
+                            fetchData()
+                            GeyTelementryData_WebSocket()
+                        }}>
                             <Text style={DeviceStyles.mainText}  >Get Device</Text>
                         </TouchableOpacity>
+                    </View>
+
+                    <View style={DeviceStyles.Hr} ></View>
+
+                    <View style={DeviceStyles.attributeHeadCon}>
+                        <Text style={DeviceStyles.attributeText}>Device Latest Telementry</Text>
+                    </View>
+
+                    <View>
+                        {dataTelementry.length > 0 ?
+                            dataTelementry.map((item, index) => <View key={index} style={DeviceStyles.attributeInputCon}>
+                                <Text style={DeviceStyles.serialNo}>{index + 1}.</Text>
+                                <Text style={DeviceStyles.inpuDatatFieldLable}> {item?.key}</Text>
+                                <Text style={DeviceStyles.inpuDatatFieldLable}> {item?.value} </Text>
+                            </View>) :
+                            <View style={DeviceStyles.emptyCon}>
+                                <Text style={DeviceStyles.emptyText} >Not found any telemetry data</Text>
+                            </View>
+                        }
                     </View>
 
                     <View style={DeviceStyles.Hr} ></View>
@@ -195,6 +321,7 @@ export default function DeviceScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
+
                     <View>
                         {serverAttribute.length > 0 ?
                             serverAttribute.map((item, index) => <View key={index} style={DeviceStyles.attributeInputCon}>
@@ -252,6 +379,12 @@ export default function DeviceScreen() {
                                 <Text style={DeviceStyles.emptyText} >Not found any server attribute</Text>
                             </View>
                         }
+                    </View>
+
+                    <View style={{ alignSelf: 'center', marginVertical: 20 }}>
+                        <TouchableOpacity style={DeviceStyles.mainButton} onPress={() => { SetAttributes(true) }}>
+                            <Text style={DeviceStyles.mainText}  >Update Server Attributes</Text>
+                        </TouchableOpacity>
                     </View>
 
                     <View style={DeviceStyles.Hr} ></View>
@@ -327,7 +460,11 @@ export default function DeviceScreen() {
                         }
                     </View>
 
-
+                    <View style={{ alignSelf: 'center', marginVertical: 20 }}>
+                        <TouchableOpacity style={DeviceStyles.mainButton} onPress={() => { fetchData() }}>
+                            <Text style={DeviceStyles.mainText}  >Update Shared Attributes</Text>
+                        </TouchableOpacity>
+                    </View>
                     <View style={DeviceStyles.Hr} ></View>
 
                     <View style={DeviceStyles.attributeHeadCon}>
@@ -338,7 +475,7 @@ export default function DeviceScreen() {
                         {clientAttribute.length > 0 ?
                             clientAttribute.map((item, index) => <View key={index} style={DeviceStyles.attributeInputCon}>
                                 <Text style={DeviceStyles.serialNo}>{index + 1}.</Text>
-                                <Text style={DeviceStyles.inpuDatatFieldLable}> {item?.key}</Text>
+                                <Text style={DeviceStyles.inpuDatatFieldLable}> {item?.key.trim()}</Text>
                                 <Text style={DeviceStyles.inpuDatatFieldLable}> {item?.value} </Text>
                             </View>) :
                             <View style={DeviceStyles.emptyCon}>

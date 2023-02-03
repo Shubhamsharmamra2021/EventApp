@@ -266,7 +266,7 @@ export const DeviceStyles = StyleSheet.create({
     logoutButton: {
         width: 300,
         borderRadius: 5,
-        backgroundColor: "#21D393",
+        backgroundColor: "red",
         paddingTop: 7,
         paddingBottom: 7,
         paddingLeft: 20,
@@ -331,7 +331,7 @@ export const DeviceStyles = StyleSheet.create({
         borderRadius: 5,
         elevation: 100,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.2,
         shadowRadius: 5
     },
@@ -358,7 +358,7 @@ export const DeviceStyles = StyleSheet.create({
         flexDirection: 'row'
     },
     attributeText: {
-        fontWeight: '400',
+        fontWeight: '700',
         fontSize: width * 0.04,
         lineHeight: width * 0.06,
         flex: 0.88
@@ -423,8 +423,8 @@ export const DeviceStyles = StyleSheet.create({
         borderRadius: 5,
         elevation: 100,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.4,
         shadowRadius: 5,
     },
     emptyCon: {
